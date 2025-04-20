@@ -3,11 +3,8 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
-#include <filesystem>
 #include <limits>
 using namespace std;
-
-string encryptDecrypt(string password);
 
 class passwordEntry
 {
@@ -47,8 +44,6 @@ private:
     vector<passwordEntry> entries;
     string encryptionKey = "X";
 
-public:
-    friend class user_registration_login;
     string encryptDecrypt(const string &data)
     {
         string result = data;
@@ -57,6 +52,54 @@ public:
             c ^= encryptionKey[0];
         }
         return result;
+    }
+
+public:
+    bool admin_access()
+    {
+        string entered_pass;
+        bool auth = false;
+        cout << "You got 5 attempts\n\n";
+        
+
+        ifstream ifile("auth_pass.txt");
+        string stored_pass;
+        if (ifile.is_open())
+        {
+            getline(ifile, stored_pass);
+            for(int i = 1 ; i <= 5 ; i++){
+            if(i == 5){
+                cout << "\nLast attempt!\nEnter wisely: ";
+            }else{
+                cout << "\nAttempt number: " << i << "\n";
+            }
+            cout << "Enter password: ";
+            getline(cin, entered_pass);
+            if (encryptDecrypt(stored_pass) == entered_pass)
+            {
+                auth = true;
+                break;
+            }
+            else
+            {
+                auth = false;
+            }
+            }
+            if(!auth){
+                cout << "Access denied! Exiting...\n";
+                return false;
+            }else{
+                cout << "\nAccess granted!" << endl;
+                return true;
+            }
+            ifile.close();
+        }
+        else
+        {
+            cout << "Error opening file!";
+            return false;
+        }
+        return false;
     }
     void addEntry(const passwordEntry &entry)
     {
@@ -122,129 +165,78 @@ public:
     }
 };
 
-class user_registration_login
-{
-private:
-    string username;
-    string password;
-
-public:
-    friend class passwordManager;
-    void registration()
-    {
-        cout << "Enter username: ";
-        getline(cin, username);
-        cout << "Enter password: ";
-        getline(cin, password);
-        ofstream file("auth.txt", ios::app);
-        file << username << " " << encryptDecrypt(password) << endl;
-        file.close();
-    }
-    void login()
-    {
-        string enter_user;
-        string enter_pass;
-        cout << "Enter username: ";
-        getline(cin, enter_user);
-        cout << "Enter password: ";
-        getline(cin, enter_pass);
-
-        ifstream ifile("auth.txt");
-        string stored_user, stored_encrypted_pass;
-        bool authenticated = false;
-
-        while (ifile >> stored_user >> stored_encrypted_pass)
-        {
-            string decrypted_pass = encryptDecrypt(stored_encrypted_pass);
-
-            if (stored_user == enter_user && decrypted_pass == enter_pass)
-            {
-                authenticated = true;
-                break;
-            }
-        }
-
-        ifile.close();
-
-        if (authenticated)
-        {
-            cout << "Login successful. Welcome to CipherVault++!\n";
-            // You can now call the password manager menu here
-        }
-        else
-        {
-            cout << "Invalid username or password.\n";
-        }
-    }
-};
-
 int main()
 {
     passwordManager manager;
-    manager.loadFromFile("Passwords.txt");
-
     int choice;
     string app, user, pass;
+    manager.loadFromFile("Passwords.txt");
 
-    cout << "\n--- Password Manager ---\n";
-    while (choice != 0)
+    cout << "\n\t\t\t\t\t---- CipherVault++ ----\n";
+    cout << "---- Admin Authentication ----\n";
+
+    if (manager.admin_access())
+
     {
-        cout << "1. Add Password\n2. Show All\n3. Search\n0. Save & Exit\nYour choice: ";
-
-        while (!(cin >> choice) || choice < 0 || choice > 3)
+        cout << "\n\t\t\t\t\t--- Welcome to CipherVault++ ---\n";
+        while (choice != 0)
         {
-            cout << "Invalid Choice! Enter a valid choice: ";
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        }
+            cout << "1. Add Password\n2. Show All\n3. Search\n0. Save & Exit\nYour choice: ";
 
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-        switch (choice)
-        {
-        case 1:
-            cout << "App Name: ";
-            getline(cin, app);
-            transform(app.begin(), app.end(), app.begin(), ::tolower);
-
-            cout << "Username: ";
-            getline(cin, user);
-            transform(user.begin(), user.end(), user.begin(), ::tolower);
-            cout << "Password: ";
-            getline(cin, pass);
-
-            while (!manager.isStrongPassword(pass))
+            while (!(cin >> choice) || choice < 0 || choice > 3)
             {
-                cout << "Weak password! Use uppercase, lowercase, digits, symbols, min 8 chars.\n";
-                cout << "Password: ";
-                getline(cin, pass);
+                cout << "Invalid Choice! Enter a valid choice: ";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
             }
 
-            manager.addEntry(passwordEntry(app, user, pass));
-            break;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-        case 2:
-            manager.displayAll();
-            break;
+            switch (choice)
+            {
+            case 1:
+                cout << "App Name: ";
+                getline(cin, app);
+                transform(app.begin(), app.end(), app.begin(), ::tolower);
 
-        case 3:
-            cout << "Enter App Name to search: ";
-            getline(cin, app);
-            transform(app.begin(), app.end(), app.begin(), ::tolower);
-            manager.searchByApp(app);
-            break;
+                cout << "Username: ";
+                getline(cin, user);
+                transform(user.begin(), user.end(), user.begin(), ::tolower);
+                cout << "Password: ";
+                getline(cin, pass);
 
-        case 0:
-            manager.saveToFile("Passwords.txt");
-            cout << "Data saved. Goodbye!\n";
-            break;
+                while (!manager.isStrongPassword(pass))
+                {
+                    cout << "Weak password! Use uppercase, lowercase, digits, symbols, min 8 chars.\n";
+                    cout << "Password: ";
+                    getline(cin, pass);
+                }
 
-        default:
-            cout << "Invalid Choice!";
-            break;
+                manager.addEntry(passwordEntry(app, user, pass));
+                break;
+
+            case 2:
+                manager.displayAll();
+                break;
+
+            case 3:
+                cout << "Enter App Name to search: ";
+                getline(cin, app);
+                transform(app.begin(), app.end(), app.begin(), ::tolower);
+                manager.searchByApp(app);
+                break;
+
+            case 0:
+                manager.saveToFile("Passwords.txt");
+                cout << "Data saved. Goodbye!\n";
+                break;
+
+            default:
+                cout << "Invalid Choice!";
+                break;
+            }
+            cout << endl;
         }
-        cout << endl;
     }
-
     return 0;
 }
