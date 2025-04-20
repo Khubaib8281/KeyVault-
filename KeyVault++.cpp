@@ -3,8 +3,11 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include <filesystem>
 #include <limits>
 using namespace std;
+
+string encryptDecrypt(string password);
 
 class passwordEntry
 {
@@ -44,6 +47,8 @@ private:
     vector<passwordEntry> entries;
     string encryptionKey = "X";
 
+public:
+    friend class user_registration_login;
     string encryptDecrypt(const string &data)
     {
         string result = data;
@@ -53,8 +58,6 @@ private:
         }
         return result;
     }
-
-public:
     void addEntry(const passwordEntry &entry)
     {
         entries.push_back(entry);
@@ -116,6 +119,62 @@ public:
             entries.emplace_back(user, app, decPass);
         }
         fin.close();
+    }
+};
+
+class user_registration_login
+{
+private:
+    string username;
+    string password;
+
+public:
+    friend class passwordManager;
+    void registration()
+    {
+        cout << "Enter username: ";
+        getline(cin, username);
+        cout << "Enter password: ";
+        getline(cin, password);
+        ofstream file("auth.txt", ios::app);
+        file << username << " " << encryptDecrypt(password) << endl;
+        file.close();
+    }
+    void login()
+    {
+        string enter_user;
+        string enter_pass;
+        cout << "Enter username: ";
+        getline(cin, enter_user);
+        cout << "Enter password: ";
+        getline(cin, enter_pass);
+
+        ifstream ifile("auth.txt");
+        string stored_user, stored_encrypted_pass;
+        bool authenticated = false;
+
+        while (ifile >> stored_user >> stored_encrypted_pass)
+        {
+            string decrypted_pass = encryptDecrypt(stored_encrypted_pass);
+
+            if (stored_user == enter_user && decrypted_pass == enter_pass)
+            {
+                authenticated = true;
+                break;
+            }
+        }
+
+        ifile.close();
+
+        if (authenticated)
+        {
+            cout << "Login successful. Welcome to CipherVault++!\n";
+            // You can now call the password manager menu here
+        }
+        else
+        {
+            cout << "Invalid username or password.\n";
+        }
     }
 };
 
